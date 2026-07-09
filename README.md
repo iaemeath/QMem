@@ -9,33 +9,59 @@
 ### 💡 Core Concept: The Four-Quadrant Memory Architecture
 `Mojomem` is a high-performance Model Context Protocol (MCP) memory server written in **pure Mojo**. Its core architectural concept is **The Four-Quadrant Developer Memory Model**, which categorizes and stores developer experiences, context, and code logic to allow LLMs to read and recall them with sub-millisecond latency.
 
+Unlike simple linear stores, it structures memory into a 2x2 layout separating **Active Context** (short-term) from **Stored Knowledge** (long-term).
+
 ```mermaid
-graph TD
+flowchart TB
     subgraph "Four-Quadrant Developer Memory Model"
-        Q1["<b>Q1: Working Memory</b><br/>Current session context / active workspace state"]
-        Q2["<b>Q2: Consensus Memory</b><br/>Pinned facts, global consensus, and common project conventions"]
-        Q3["<b>Q3: Structural Context</b><br/>Static AST registry, Pom/Package descriptors, and directory 'identity'"]
-        Q4["<b>Q4: Episodic Memory</b><br/>FTS5 keyword & vector similarity semantic search DB"]
+        direction TB
+        subgraph Active ["Active Context (Short-term)"]
+            direction LR
+            Q1["<b>Q1: Working Memory</b><br/>Current session context / active workspace state"]
+            Q2["<b>Q2: Consensus Memory</b><br/>Pinned facts, global consensus, and common project conventions"]
+        end
+        subgraph Stored ["Stored Knowledge (Long-term)"]
+            direction LR
+            Q3["<b>Q3: Structural Context</b><br/>Static AST registry, descriptors, directory identity"]
+            Q4["<b>Q4: Episodic Memory</b><br/>FTS5 keyword & vector similarity semantic search DB"]
+        end
     end
 ```
 
-1. **Q1: Working Memory (工作记忆 / 活跃上下文)**: Keeps track of the immediate conversation context, active variables, and current workspace modifications.
-2. **Q2: Consensus Memory (共识记忆 / 全局规约)**: Stores global consensus facts, common project conventions, and pinned items that are boosted during semantic recalls.
-3. **Q3: Structural Context (结构记忆 / 项目户口本)**: Contains static configurations, Pom/Package/Git Remote descriptors, and directory AST structural information.
-4. **Q4: Episodic Memory (历史记忆 / 语义数据库)**: A persistent repository storing all experiences, indexed via hybrid search (SQLite FTS5 text match + ONNX cosine vector embeddings).
+---
+
+### 🔄 Working Modes: Push, Pull & Query
+`Mojomem` operates in three distinct modes to coordinate memory exchange between the LLM and the repository:
+
+1. **Push (推送 / Save & Update)**:
+   - The LLM proactively saves important decisions, bug fixes, or architecture designs into Q4 Episodic Memory.
+   - When a specific keyword/topic is hit, it triggers an auto-upsert in SQLite.
+2. **Pull (拉取 / Semantic Recall)**:
+   - Queries are processed using Reciprocal Rank Fusion (RRF) hybrid search.
+   - The system performs FTS5 keyword matching and ONNX vector cosine similarity matching, prioritizing Q2 Consensus Memory (pinned entries).
+3. **Query (查询 & 探测 / Search & Context)**:
+   - Performs structural directory analysis (identity probing like Pom/Package descriptors) to build Q3 Structural Context.
+   - Allows strict filtering by scope (`project`, `personal`) and memory types.
 
 ---
 
-### 🚀 Key Features
-- **Zero Python Runtime Dependency**: Rewritten from scratch in Mojo 0.26, removing PyInstaller and Python environment cold-start overhead.
-- **Native FFI Bridging**: Utilizes Mojo `OwnedDLHandle` to execute SQLite3 and ONNX Runtime calls natively with zero-overhead C shims.
-- **Embedded WordPiece Tokenizer**: Built-in native Mojo tokenizer that parses HuggingFace `tokenizer.json` directly.
-- **Portable Packaging**: The compiled executable is bundled into a single standalone directory, ready for deployment to offline or air-gapped target environments.
+### 🛠️ Technology Stack
+- **Compiler**: Mojo 0.26.2 (Native C-compatible compilation).
+- **Inference Engine**: ONNX Runtime (BGE-Small-ZH-v1.5 model) bridged via native FFI.
+- **Database Engine**: SQLite3 with FTS5 and `sqlite-vec` extension (enabling direct embedding storage and Match queries).
+
+---
+
+### 📜 Attribution & Design Philosophy
+`Mojomem` inherits its core protocol designs and semantic memory philosophy from the open-source [codebase-memory](https://github.com/craws/codebase-memory) project. 
+
+Our design philosophy centers around:
+- **Zero-Dependency High Performance**: Replacing Python's interpreter overhead and PyInstaller packaging bloat with native machine code.
+- **Cognitive Coexistence**: Mapping human-like memory quadrants (Short-term working memory vs Long-term episodic memory) to SQLite & Vector indices for semantic reasoning.
 
 ---
 
 ### 📁 Project Structure
-The project layout is organized following clean package and compilation conventions:
 ```text
 mojomem/
 ├── src/                    # Mojo Source files
@@ -55,7 +81,7 @@ mojomem/
 ├── release/                # Standalone portable release folder
 │   ├── mojomem_mcp         # Compiled binary
 │   └── ...
-└── README.md
+└── LICENSE                 # MIT License
 ```
 
 ---
@@ -82,61 +108,52 @@ Configure your MCP Client (e.g., Claude Desktop) to point to the `release/start_
 ## 中文
 
 ### 💡 核心思想：四象限记忆模型
-`Mojomem` 是一个使用 **纯 Mojo** 语言编写的高性能模型上下文协议 (MCP) 记忆服务器。其核心架构思想为 **四象限开发者记忆模型**，将开发者的开发经历、环境上下文和项目代码逻辑进行分类与持久化，从而让大语言模型（LLM）能够以毫秒级的响应速度进行精准召回。
+`Mojomem` 是一个使用 **纯 Mojo** 语言编写的高性能模型上下文协议 (MCP) 记忆服务器。其核心架构思想为 **四象限开发者记忆模型**。
 
-1. **第一象限 (Q1): 工作记忆 (Working Memory)**: 追踪当前的会话活跃上下文、临时变量和活动的工作区修改。
-2. **第二象限 (Q2): 共识记忆 (Consensus Memory)**: 存储全局性的共识事实、项目公共规范和置顶知识（在语义检索中享有更高的匹配权重）。
-3. **第三象限 (Q3): 结构上下文 (Structural Context)**: 涵盖项目的静态结构树、配置文件（Pom/Package/Git Remote）以及目录“户口本”等身份描述。
-4. **第四象限 (Q4): 历史情境记忆 (Episodic Memory)**: 历史经验沉淀的数据库，通过 FTS5 关键词匹配与 ONNX 向量相似度进行混合多模态检索。
+与传统的单维度线性存储不同，本项目将开发者的上下文在逻辑上划分为 **活跃上下文（短期）** 与 **持久知识（长期）** 的 2x2 四象限结构，以便大语言模型以低于 1 毫秒的延迟进行检索。
 
----
-
-### 🚀 核心技术特性
-- **运行时零 Python 依赖**：使用 Mojo 0.26 纯原生编写，彻底摆脱 PyInstaller 打包臃肿和 Python 冷启动的性能瓶颈。
-- **原生 C FFI 桥接**：利用 Mojo 的 `OwnedDLHandle` 通过极简 C/C++ Shim 直接互操 SQLite3 与 ONNX Runtime，无封装性能损耗。
-- **内置 WordPiece 分词器**：在 Mojo 中原生实现了分词引擎，能直接读取解析 HuggingFace 的 `tokenizer.json`。
-- **独立离线打包**：编译出的二进制与所需 `.so` 库统一整理至 `release/`，开箱即用，特别契合离线或物理隔离环境部署。
-
----
-
-### 📁 项目结构
-项目结构符合 Mojo 官方包管理与测试目录的最佳实践规范：
-```text
-mojomem/
-├── src/                    # Mojo 核心源码
-│   ├── mcp_server.mojo     # 主程序入口 (JSON-RPC stdio 循环)
-│   ├── tokenizer.mojo      # 原生分词器
-│   ├── sqlite_ffi.mojo     # SQLite3 接口绑定
-│   ├── ort_ffi.mojo        # ONNX Runtime 接口绑定
-│   └── json_utils.mojo     # JSON 解析助手
-├── shims/                  # C/C++ FFI 垫片源码
-│   ├── mj_sqlite.c         # SQLite3 垫片 (消除双指针限制)
-│   └── ort_helper.cpp      # ONNX Runtime 垫片
-├── tests/                  # 单元与集成测试目录
-│   ├── test_ort_ffi.mojo   # ONNX 推理测试
-│   ├── test_sqlite_ffi.mojo# SQLite3 测试
-│   ├── test_mcp.py        # MCP 集成测试 (JSON-RPC 模拟)
-│   └── ...
-├── release/                # 便携式离线发布包
-│   ├── mojomem_mcp         # 编译后的主程序
-│   └── ...
-└── README.md
+```mermaid
+flowchart TB
+    subgraph "四象限开发者记忆模型"
+        direction TB
+        subgraph Active ["活跃上下文 (短期记忆)"]
+            direction LR
+            Q1["<b>第一象限: 工作记忆</b><br/>当前会话上下文 / 工作区活跃状态"]
+            Q2["<b>第二象限: 共识记忆</b><br/>全局开发规范 / 置顶规约知识"]
+        end
+        subgraph Stored ["持久知识 (长期记忆)"]
+            direction LR
+            Q3["<b>第三象限: 结构上下文</b><br/>项目树静态结构 / 描述文件 / 户口本信息"]
+            Q4["<b>第四象限: 历史情境记忆</b><br/>混合多模态检索库 (向量 + FTS5 全文检索)"]
+        end
+    end
 ```
 
 ---
 
-### 🛠️ 编译与使用
+### 🔄 工作模式：推送、拉取与查询 (Push, Pull & Query)
+`Mojomem` 通过三种核心模式无缝调谐大模型与本地库的数据交换：
 
-#### 编译项目：
-1. 编译 C/C++ 垫片 (shims)：
-   ```bash
-   gcc -shared -fPIC -o libmj_sqlite.so shims/mj_sqlite.c -lsqlite3
-   g++ -shared -fPIC -o libort_helper.so shims/ort_helper.cpp -I./ort_sdk/include -L./ort_sdk/lib -lonnxruntime
-   ```
-2. 编译主程序二进制：
-   ```bash
-   mojo build src/mcp_server.mojo -o mojomem_mcp
-   ```
+1. **推送 (Push / 存储与更新)**:
+   - LLM 发现重要决策、Bug 修复或重构知识时，通过 `mem_save` 或 `mem_update` 主动写入第四象限。
+   - 对指定的主题（Topic Key）进行自动覆盖更新 (Upsert)。
+2. **拉取 (Pull / 语义召回)**:
+   - 检索时执行 RRF 混合检索算法，同时检索 FTS5 全文索引与 ONNX 向量相似度，并在此基础上对第二象限（全局共识/置顶记忆）进行加权提升。
+3. **查询 (Query / 探测与列表)**:
+   - 静态分析目录特征（Git Remote / Pom 描述），动态生成第三象限结构上下文，支持按域（`project`、`personal`）和类型精细化过滤查询。
 
-#### 运行服务：
-直接将您的 MCP 客户端指向 `release/start_mcp.sh` 脚本，它会自动配置所需动态链接库的搜索路径。
+---
+
+### 🛠️ 技术栈
+- **编译器**：Mojo 0.26.2 (原生 C 兼容编译，零 Python 依赖)。
+- **推理引擎**：ONNX Runtime (BGE-Small-ZH-v1.5) 通过 FFI 动态加载。
+- **数据库**：SQLite3，结合 FTS5 与 `sqlite-vec` 扩展提供原生的全文检索与向量余弦相似度计算。
+
+---
+
+### 📜 开源声明与设计哲学
+本项目的核心记忆表示设计和协议标准借鉴并致敬了开源项目 [codebase-memory](https://github.com/craws/codebase-memory)。
+
+我们的设计哲学为：
+- **极致的零运行时依赖**：抛弃了 Python 解释器的执行开销和 PyInstaller 的臃肿，以高性能的原生二进制运行。
+- **认知共生架构**：在底层数据库及向量架构中模拟人类脑部认知模式（短期工作记忆与长期情景记忆），增强模型的开发心智模型。
