@@ -5,7 +5,7 @@ fn main() raises:
     print("=== SQLite FFI Test ===")
 
     var db = SQLiteDB(
-        "/home/iaemeath/code/mojomem/libmj_sqlite.so",
+        "/home/iaemeath/code/QMem/libmj_sqlite.so",
         "/tmp/test_mojo_sqlite.db"
     )
     print("✓ Database opened")

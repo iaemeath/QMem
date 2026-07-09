@@ -2,12 +2,12 @@ import subprocess
 import json
 
 p = subprocess.Popen(
-    ["./mojomem_mcp"],
+    ["./qmem_mcp"],
     stdin=subprocess.PIPE,
     stdout=subprocess.PIPE,
     stderr=subprocess.PIPE,
     text=True,
-    env={"LD_LIBRARY_PATH": "/home/iaemeath/code/mojomem/ort_sdk/linux/lib:."}
+    env={"LD_LIBRARY_PATH": "/home/iaemeath/code/QMem/ort_sdk/linux/lib:."}
 )
 
 reqs = [

@@ -86,7 +86,7 @@ class ProjectContextProbe:
     def generate_context_text(self, directory=None):
         """生成可读的户口本摘要文本。"""
         info = self.probe(directory)
-        lines = ["# 项目身份探针结果（mojomem init_project_context）", ""]
+        lines = ["# 项目身份探针结果（QMem init_project_context）", ""]
         for k, v in info.items():
             lines.append(f"- **{k}**: {v}")
         lines.append("")

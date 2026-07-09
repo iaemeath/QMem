@@ -11,7 +11,7 @@ fn main() raises:
     # 一并打包在未来的可执行二进制中。
     var mcp_server = Python.import_module("mcp_server")
     
-    print("🚀 Mojomem MCP Server 启动 (Powered by Mojo & Python Interop)")
+    print("🚀 QMem MCP Server 启动 (Powered by Mojo & Python Interop)")
     
     # 阻塞式监听 StdIO 的 JSON-RPC 请求
     mcp_server.serve()

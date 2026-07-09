@@ -6,5 +6,5 @@ print(f'exists: {os.path.exists(p)}')
 print(f'cwd: {os.getcwd()}')
 
 # Try absolute path
-ap = r'C:\mojomem\bge-small-zh-v1.5-onnx\onnx\model.onnx'
+ap = r'C:\QMem\bge-small-zh-v1.5-onnx\onnx\model.onnx'
 print(f'abs_exists: {os.path.exists(ap)}')

@@ -13,7 +13,7 @@ struct OrtSessionState {
     std::vector<std::string> output_names;
 
     OrtSessionState(const char* model_path) 
-        : env(ORT_LOGGING_LEVEL_WARNING, "mojomem_ort"),
+        : env(ORT_LOGGING_LEVEL_WARNING, "qmem_ort"),
           session(nullptr) 
     {
         Ort::SessionOptions session_options;

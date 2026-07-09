@@ -1,5 +1,5 @@
 import os
-os.chdir("C:\mojomem")
+os.chdir("C:\QMem")
 from embedding import BGEEmbedding
 e = BGEEmbedding()
 v = e.embed("保供达梦CLOB陷阱")

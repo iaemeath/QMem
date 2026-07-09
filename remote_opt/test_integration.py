@@ -1,12 +1,12 @@
 import json
-from mcp_server import MojomemMCP
+from mcp_server import QMemMCP
 
 def run_tests():
     print("==================================================")
-    print("🚀 启动 mojomem MCP 综合测试用例 (Integration Test) ")
+    print("🚀 启动 QMem MCP 综合测试用例 (Integration Test) ")
     print("==================================================\n")
     
-    server = MojomemMCP()
+    server = QMemMCP()
 
     # 测试用例 1: 初始化握手
     print("▶️ [Test 1] 验证 Server Initialize...")

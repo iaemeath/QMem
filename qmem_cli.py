@@ -1,5 +1,5 @@
 """
-Mojomem CLI —— 仿 Engram 的命令行入口（save/search/architecture/init）。
+QMem CLI —— 仿 Engram 的命令行入口（save/search/architecture/init）。
 对齐 mcp_server v2 的新工具签名（args dict）。
 """
 import argparse
@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Mojomem CLI (Inspired by Engram)")
+    parser = argparse.ArgumentParser(description="QMem CLI (Inspired by Engram)")
     subparsers = parser.add_subparsers(dest="command")
 
     p_save = subparsers.add_parser("save", help="保存记忆 (Push)")
@@ -36,8 +36,8 @@ def main():
 
     args = parser.parse_args()
 
-    from mcp_server import MojomemMCP
-    srv = MojomemMCP()
+    from mcp_server import QMemMCP
+    srv = QMemMCP()
 
     if args.command == "save":
         res = srv._save({"project_id": args.project, "topic_key": args.topic,

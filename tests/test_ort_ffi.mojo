@@ -9,8 +9,8 @@ fn main() raises:
     print("✓ Tokenizer loaded (" + String(len(tok.vocab)) + " tokens)")
 
     var ort = OrtSession(
-        "/home/iaemeath/code/mojomem/libort_helper.so",
-        "/home/iaemeath/code/mojomem/bge-small-zh-v1.5-onnx/onnx/model.onnx",
+        "/home/iaemeath/code/QMem/libort_helper.so",
+        "/home/iaemeath/code/QMem/bge-small-zh-v1.5-onnx/onnx/model.onnx",
         embedding_dim=512
     )
     print("✓ ORT session initialized")

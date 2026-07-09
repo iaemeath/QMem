@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "mojomem-memory-system": {
+    "QMem-memory-system": {
       "command": "python",
       "args": [
         "mcp_server.py"

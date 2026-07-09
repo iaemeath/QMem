@@ -19,7 +19,7 @@ class CBMWrapper:
         self._spawn()
 
     def _detect_binary(self):
-        """探测 codebase-memory-mcp 可执行文件位置：优先 mojomem 目录内，其次 PATH。"""
+        """探测 codebase-memory-mcp 可执行文件位置：优先 QMem 目录内，其次 PATH。"""
         ext = ".exe" if os.name == "nt" else ""
         local_bin = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"codebase-memory-mcp{ext}")
         if os.path.exists(local_bin):
@@ -46,7 +46,7 @@ class CBMWrapper:
         init_resp = self._send_raw("initialize", {
             "protocolVersion": "2024-11-05",
             "capabilities": {},
-            "clientInfo": {"name": "mojomem-cbm-wrapper", "version": "2.0"}
+            "clientInfo": {"name": "QMem-cbm-wrapper", "version": "2.0"}
         })
         if "error" in init_resp:
             print(f"⚠️ CBM initialize failed: {init_resp['error']}")

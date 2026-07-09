@@ -1,5 +1,5 @@
 """
-Mojomem 实测验证：10 项场景，全部通过才算"能替代"。
+QMem 实测验证：10 项场景，全部通过才算"能替代"。
 
 用法：python verify.py
 每项独立运行，一项失败不阻断后续（收集全部结果统一报告）。
@@ -86,10 +86,10 @@ def test_2_schema():
 def test_3_save_with_metadata():
     """测试3：mem_save 带 title/type，向量正确入库。"""
     try:
-        from mcp_server import MojomemMCP
-        srv = MojomemMCP()
+        from mcp_server import QMemMCP
+        srv = QMemMCP()
         srv._init()  # 用正式库 schema，但测试后清理
-        # 用正式库测（因为 MojomemMCP 绑定了 DBPATH）
+        # 用正式库测（因为 QMemMCP 绑定了 DBPATH）
         res = srv._save({
             "project_id": "verify_proj", "topic_key": "test-kb",
             "content": "测试保供达梦 IS_DELETE 中文值陷阱", "title": "测试标题",
@@ -111,8 +111,8 @@ def test_3_save_with_metadata():
 def test_4_upsert():
     """测试4：同 topic_key 再 save，应 UPDATE 不新增。"""
     try:
-        from mcp_server import MojomemMCP
-        srv = MojomemMCP()
+        from mcp_server import QMemMCP
+        srv = QMemMCP()
         srv._init()
         r1 = srv._save({"project_id": "verify_proj", "topic_key": "upsert-test", "content": "v1内容"})
         r2 = srv._save({"project_id": "verify_proj", "topic_key": "upsert-test", "content": "v2新内容"})
@@ -135,8 +135,8 @@ def test_4_upsert():
 def test_5_hybrid_recall():
     """测试5：中文语义召回 + 英文词法召回。"""
     try:
-        from mcp_server import MojomemMCP
-        srv = MojomemMCP()
+        from mcp_server import QMemMCP
+        srv = QMemMCP()
         srv._init()
         # 存两条
         a = srv._save({"project_id": "v5", "content": "FeignClient must have contextId annotation"})
@@ -159,8 +159,8 @@ def test_5_hybrid_recall():
 def test_6_promote_boost():
     """测试6：promote 后，内容相近时该条排名靠前（is_global bonus 生效）。"""
     try:
-        from mcp_server import MojomemMCP
-        srv = MojomemMCP()
+        from mcp_server import QMemMCP
+        srv = QMemMCP()
         srv._init()
         # 两条内容几乎相同 → 语义相似度接近 → boost 应让 promoted 的排前面
         a = srv._save({"project_id": "v6b", "content": "达梦数据库连接配置说明"})
@@ -179,8 +179,8 @@ def test_6_promote_boost():
 def test_7_project_filter():
     """测试7：mem_recall 带 project 只返回该 project。"""
     try:
-        from mcp_server import MojomemMCP
-        srv = MojomemMCP()
+        from mcp_server import QMemMCP
+        srv = QMemMCP()
         srv._init()
         a = srv._save({"project_id": "projA", "content": "项目A的保供配置"})
         b = srv._save({"project_id": "projB", "content": "项目B的保供配置"})
@@ -197,8 +197,8 @@ def test_7_project_filter():
 def test_8_context():
     """测试8：mem_context 返回最近 N 条 + pinned 优先。"""
     try:
-        from mcp_server import MojomemMCP
-        srv = MojomemMCP()
+        from mcp_server import QMemMCP
+        srv = QMemMCP()
         srv._init()
         a = srv._save({"project_id": "v8", "content": "普通条目"})
         b = srv._save({"project_id": "v8", "content": "置顶条目"})
@@ -235,8 +235,8 @@ def test_9_migration():
 def test_10_init_probe():
     """测试10：init_project_context 真实探测。"""
     try:
-        from mcp_server import MojomemMCP
-        srv = MojomemMCP()
+        from mcp_server import QMemMCP
+        srv = QMemMCP()
         # 探测 D:\code\bfo_zj_yxyd（Java 项目，有 pom.xml）
         res = srv._init_project_context({"directory": r"D:\code\bfo_zj_yxyd"})
         ok = res["status"] == "success" and "context" in res
@@ -249,7 +249,7 @@ def test_10_init_probe():
 
 def main():
     print("=" * 60)
-    print("🚀 Mojomem 10 项实测验证")
+    print("🚀 QMem 10 项实测验证")
     print("=" * 60)
     tests = [
         ("测试1", test_1_import),
