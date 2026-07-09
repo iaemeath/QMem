@@ -1,18 +1,18 @@
 import os,sys
-os.chdir('C:\\mojomem')
-sys.path.insert(0,'C:\\mojomem')
+os.chdir('C:\\QMem')
+sys.path.insert(0,'C:\\QMem')
 from embedding import BGEEmbedding
 e = BGEEmbedding()
 v = e.embed('保供达梦')
 assert len(v)==512 and v[0]!=0
 print('EMBED:OK dim=512')
 import sqlite3,sqlite_vec,numpy as np
-db = 'C:\\mojomem\\test.db'
+db = 'C:\\QMem\\test.db'
 if os.path.exists(db): os.remove(db)
 c = sqlite3.connect(db)
 c.enable_load_extension(True)
 sqlite_vec.load(c)
-c.executescript(open('C:\\mojomem\\schema.sql').read())
+c.executescript(open('C:\\QMem\\schema.sql').read())
 oid='t01'
 c.execute('INSERT INTO memory_facts(obs_uuid,project,topic_key,content) VALUES(?,?,?,?)',(oid,'p1','wk','保供达梦CLOB'))
 rid=c.execute('SELECT id FROM memory_facts WHERE obs_uuid=?',(oid,)).fetchone()[0]

@@ -61,7 +61,7 @@ fn json_kv_float(k: String, v: Float64) -> String:
 
 # ── Server ────────────────────────────────────────────────────────────────────
 
-struct MojomemMCP:
+struct QMemMCP:
     var db: SQLiteDB
     var ort: OrtSession
     var tok: WordPieceTokenizer
@@ -105,7 +105,7 @@ struct MojomemMCP:
             if method == "initialize":
                 res = json_obj(
                     json_kv_str("protocolVersion", "2024-11-05"),
-                    json_kv("serverInfo", json_obj(json_kv_str("name", "mojomem-mcp"), json_kv_str("version", "2.0"))),
+                    json_kv("serverInfo", json_obj(json_kv_str("name", "qmem-mcp"), json_kv_str("version", "2.0"))),
                     json_kv("capabilities", json_obj(json_kv("tools", "{}")))
                 )
             elif method == "tools/list":
@@ -516,7 +516,7 @@ struct MojomemMCP:
         return json_obj(json_kv_str("obs_id", obs_id), json_kv_str("action", "updated"))
 
 fn serve() raises:
-    var server = MojomemMCP()
+    var server = QMemMCP()
     while True:
         try:
             var line = input()

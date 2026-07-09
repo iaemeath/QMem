@@ -23,7 +23,7 @@ _REQUIRED_COLUMNS = {
     "deleted_at": "TIMESTAMP",
 }
 
-class MojomemMCP:
+class QMemMCP:
     def __init__(self):
         self.embedder = BGEEmbedding()
         self.searcher = HybridSearcher(DBPATH)
@@ -73,7 +73,7 @@ class MojomemMCP:
             conn.executescript(f.read())
         self._migrate_schema(conn)
         conn.close()
-        return {"protocolVersion": "2024-11-05", "serverInfo": {"name": "mojomem-mcp", "version": "2.0"}, "capabilities": {"tools": {}}}
+        return {"protocolVersion": "2024-11-05", "serverInfo": {"name": "qmem-mcp", "version": "2.0"}, "capabilities": {"tools": {}}}
 
     def _tools_list(self):
         local_tools = [
@@ -322,7 +322,7 @@ class MojomemMCP:
 
 
 def serve():
-    server = MojomemMCP()
+    server = QMemMCP()
     for line in sys.stdin:
         line = line.strip()
         if not line:

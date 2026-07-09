@@ -1,7 +1,7 @@
 """
-Engram → Mojomem 数据迁移脚本
+Engram → QMem 数据迁移脚本
 
-把 ~/.engram/engram.db 的 observations 全量导入 Mojomem 的 core_memory.db。
+把 ~/.engram/engram.db 的 observations 全量导入 QMem 的 core_memory.db。
 只读打开 Engram（mode=ro），逐条 embed + INSERT。
 
 用法：python migrate_from_engram.py [--engram <path>] [--dry-run]
@@ -16,7 +16,7 @@ import numpy as np
 from embedding import BGEEmbedding
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
-Mojomem_DB = os.path.join(_DIR, "core_memory.db")
+QMem_DB = os.path.join(_DIR, "core_memory.db")
 Default_ENGRAM = os.path.expanduser("~/.engram/engram.db")
 
 
@@ -28,8 +28,8 @@ def open_engram_ro(engram_path):
     return conn
 
 
-def open_mojomem():
-    conn = sqlite3.connect(Mojomem_DB)
+def open_QMem():
+    conn = sqlite3.connect(QMem_DB)
     conn.enable_load_extension(True)
     import sqlite_vec
     sqlite_vec.load(conn)
@@ -38,7 +38,7 @@ def open_mojomem():
 
 
 def ensure_schema(conn):
-    """确保 Mojomem 表结构是最新版（复用 mcp_server 的 schema.sql + 迁移）。"""
+    """确保 QMem 表结构是最新版（复用 mcp_server 的 schema.sql + 迁移）。"""
     with open(os.path.join(_DIR, "schema.sql"), encoding="utf-8") as f:
         conn.executescript(f.read())
     required = {
@@ -72,8 +72,8 @@ def migrate(engram_path, dry_run=False):
             print(f"    [{r['project']}] <{r['topic_key']}> {r['title'][:40]}")
         return
 
-    print("[2] 初始化 Mojomem schema + 加载 embedding 模型...")
-    mconn = open_mojomem()
+    print("[2] 初始化 QMem schema + 加载 embedding 模型...")
+    mconn = open_QMem()
     ensure_schema(mconn)
     embedder = BGEEmbedding()
 
@@ -113,7 +113,7 @@ def migrate(engram_path, dry_run=False):
     projects = mconn.execute(
         "SELECT project, COUNT(*) n FROM memory_facts WHERE deleted_at IS NULL GROUP BY project ORDER BY n DESC"
     ).fetchall()
-    print(f"    Mojomem 现有存活记忆: {total} 条")
+    print(f"    QMem 现有存活记忆: {total} 条")
     for p in projects:
         print(f"      {p['project']:30s} {p['n']}")
     mconn.close()

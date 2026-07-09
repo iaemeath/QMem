@@ -1,4 +1,4 @@
-# Mojomem: High-Performance Mojo MCP Memory Server
+# QMem: High-Performance Mojo MCP Memory Server
 
 [English](#english) | [中文](#中文)
 
@@ -7,7 +7,7 @@
 ## English
 
 ### 💡 Core Concept: The Four-Quadrant Memory Architecture
-`Mojomem` is a high-performance Model Context Protocol (MCP) memory server written in **pure Mojo**. Its core architectural concept is **The Four-Quadrant Developer Memory Model**, which categorizes and stores developer experiences, context, and code logic to allow LLMs to read and recall them with sub-millisecond latency.
+`QMem` is a high-performance Model Context Protocol (MCP) memory server written in **pure Mojo**. Its core architectural concept is **The Four-Quadrant Developer Memory Model**, which categorizes and stores developer experiences, context, and code logic to allow LLMs to read and recall them with sub-millisecond latency.
 
 Unlike simple linear stores, it structures memory into a 2x2 layout separating **Active Context** (short-term) from **Stored Knowledge** (long-term).
 
@@ -31,7 +31,7 @@ flowchart TB
 ---
 
 ### 🔄 Working Modes: Push, Pull & Query
-`Mojomem` operates in three distinct modes to coordinate memory exchange between the LLM and the repository:
+`QMem` operates in three distinct modes to coordinate memory exchange between the LLM and the repository:
 
 1. **Push (推送 / Save & Update)**:
    - The LLM proactively saves important decisions, bug fixes, or architecture designs into Q4 Episodic Memory.
@@ -53,7 +53,7 @@ flowchart TB
 ---
 
 ### 📜 Attribution & Design Philosophy
-`Mojomem` inherits its core protocol designs and semantic memory philosophy from the open-source [codebase-memory](https://github.com/craws/codebase-memory) project. 
+`QMem` inherits its core protocol designs and semantic memory philosophy from the open-source [codebase-memory](https://github.com/craws/codebase-memory) project. 
 
 Our design philosophy centers around:
 - **Zero-Dependency High Performance**: Replacing Python's interpreter overhead and PyInstaller packaging bloat with native machine code.
@@ -63,7 +63,7 @@ Our design philosophy centers around:
 
 ### 📁 Project Structure
 ```text
-mojomem/
+QMem/
 ├── src/                    # Mojo Source files
 │   ├── mcp_server.mojo     # Main entry point (JSON-RPC stdio loop)
 │   ├── tokenizer.mojo      # Native WordPiece tokenizer
@@ -79,7 +79,7 @@ mojomem/
 │   ├── test_mcp.py        # Integration test (JSON-RPC)
 │   └── ...
 ├── release/                # Standalone portable release folder
-│   ├── mojomem_mcp         # Compiled binary
+│   ├── qmem_mcp         # Compiled binary
 │   └── ...
 └── LICENSE                 # MIT License
 ```
@@ -96,7 +96,7 @@ mojomem/
    ```
 2. Build the server binary:
    ```bash
-   mojo build src/mcp_server.mojo -o mojomem_mcp
+   mojo build src/mcp_server.mojo -o qmem_mcp
    ```
 
 #### Execution:
@@ -108,7 +108,7 @@ Configure your MCP Client (e.g., Claude Desktop) to point to the `release/start_
 ## 中文
 
 ### 💡 核心思想：四象限记忆模型
-`Mojomem` 是一个使用 **纯 Mojo** 语言编写的高性能模型上下文协议 (MCP) 记忆服务器。其核心架构思想为 **四象限开发者记忆模型**。
+`QMem` 是一个使用 **纯 Mojo** 语言编写的高性能模型上下文协议 (MCP) 记忆服务器。其核心架构思想为 **四象限开发者记忆模型**。
 
 与传统的单维度线性存储不同，本项目将开发者的上下文在逻辑上划分为 **活跃上下文（短期）** 与 **持久知识（长期）** 的 2x2 四象限结构，以便大语言模型以低于 1 毫秒的延迟进行检索。
 
@@ -132,7 +132,7 @@ flowchart TB
 ---
 
 ### 🔄 工作模式：推送、拉取与查询 (Push, Pull & Query)
-`Mojomem` 通过三种核心模式无缝调谐大模型与本地库的数据交换：
+`QMem` 通过三种核心模式无缝调谐大模型与本地库的数据交换：
 
 1. **推送 (Push / 存储与更新)**:
    - LLM 发现重要决策、Bug 修复或重构知识时，通过 `mem_save` 或 `mem_update` 主动写入第四象限。
