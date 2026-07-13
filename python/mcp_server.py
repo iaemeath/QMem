@@ -74,7 +74,7 @@ class QMemMCP:
             conn.executescript(f.read())
         self._migrate_schema(conn)
         conn.close()
-        return {"protocolVersion": "2024-11-05", "serverInfo": {"name": "qmem-mcp", "version": "2.0"}, "capabilities": {"tools": {}}}
+        return {"protocolVersion": "2024-11-05", "serverInfo": {"name": "qmem-mcp", "version": "2.1"}, "capabilities": {"tools": {}}}
 
     def _tools_list(self):
         local_tools = [
