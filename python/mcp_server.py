@@ -91,7 +91,7 @@ class QMemMCP:
             {"name": "mem_update", "description": "按 obs_id 局部更新（content/title/type），自动重算向量。", "inputSchema": {"type": "object", "properties": {"obs_id": {"type": "string"}, "content": {"type": "string"}, "title": {"type": "string"}, "type": {"type": "string"}}, "required": ["obs_id"]}},
             {"name": "mem_context", "description": "开场召回：按 project 返回最近 N 条 + pinned 优先。", "inputSchema": {"type": "object", "properties": {"project": {"type": "string"}, "limit": {"type": "integer", "default": 10}}, "required": ["project"]}},
             {"name": "mem_delete", "description": "彻底硬删除记忆及向量索引，立即生效。", "inputSchema": {"type": "object", "properties": {"obs_id": {"type": "string"}}, "required": ["obs_id"]}},
-            {"name": "memory_promote", "description": "提升为 Q2 全局共识（is_global=1，召回时 boost）。", "inputSchema": {"type": "object", "properties": {"obs_id": {"type": "string"}}, "required": ["obs_id"]}},
+            {"name": "memory_promote", "description": "将本条经验提炼并抽取到物理的 Q2 Skill (项目共识) 中，实现物理隔离。", "inputSchema": {"type": "object", "properties": {"obs_id": {"type": "string"}, "project_path": {"type": "string", "description": "目标项目根目录的绝对路径，用于写入 .agents/skills/"}}, "required": ["obs_id", "project_path"]}},
             {"name": "mem_list_projects", "description": "列出所有 project 及其记忆数。", "inputSchema": {"type": "object", "properties": {}}},
             {"name": "init_project_context", "description": "探测目录身份线索（git remote/pom/package.json），生成 Q3 户口本。", "inputSchema": {"type": "object", "properties": {"directory": {"type": "string"}}, "required": ["directory"]}},
         ]
@@ -238,12 +238,36 @@ class QMemMCP:
 
     def _promote(self, args):
         obs_id = args.get("obs_id")
+        project_path = args.get("project_path")
+        if not obs_id or not project_path:
+            return {"error": "obs_id and project_path are required"}
+            
         conn = self._get_conn()
-        conn.execute("UPDATE memory_facts SET is_global=1 WHERE obs_uuid=?", (obs_id,))
+        row = conn.execute("SELECT title, content FROM memory_facts WHERE obs_uuid=?", (obs_id,)).fetchone()
+        if not row:
+            conn.close()
+            return {"error": "observation not found"}
+            
+        title = row["title"]
+        content = row["content"]
+        
+        # 物理写入 .agents/skills/q2-consensus/SKILL.md
+        skill_dir = os.path.join(project_path, ".agents", "skills", "q2-consensus")
+        os.makedirs(skill_dir, exist_ok=True)
+        skill_file = os.path.join(skill_dir, "SKILL.md")
+        
+        is_new = not os.path.exists(skill_file)
+        with open(skill_file, "a", encoding="utf-8") as f:
+            if is_new:
+                f.write("---\nname: q2-consensus\ndescription: 项目级别全局共识与架构经验\n---\n\n# Q2 全局共识库\n\n此文件用于记录项目中跨模块的、具有深远影响的全局共识和踩坑经验。\n\n")
+            f.write(f"## {title}\n\n{content}\n\n")
+            
+        # 物理硬删除原始记录，完成绝对隔离
+        conn.execute("DELETE FROM memory_facts WHERE obs_uuid=?", (obs_id,))
         n = conn.total_changes
         conn.commit()
         conn.close()
-        return {"promoted": n}
+        return {"promoted_to_skill": skill_file, "hard_deleted": n}
 
     # ==================== 读取 ====================
 
