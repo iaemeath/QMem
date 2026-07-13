@@ -138,6 +138,10 @@ struct QMemMCP:
         var req_obsid = List[String]()
         req_obsid.append('"obs_id"')
         
+        var req_obsid_proj = List[String]()
+        req_obsid_proj.append('"obs_id"')
+        req_obsid_proj.append('"project_path"')
+        
         var req_project = List[String]()
         req_project.append('"project"')
 
@@ -209,13 +213,14 @@ struct QMemMCP:
 
         tools.append(json_obj(
             json_kv_str("name", "memory_promote"),
-            json_kv_str("description", "Promote memory to global"),
+            json_kv_str("description", "将本条经验提炼并抽取到物理的 Q2 Skill (项目共识) 中，实现物理隔离。"),
             json_kv("inputSchema", json_obj(
                 json_kv_str("type", "object"),
                 json_kv("properties", json_obj(
-                    json_kv("obs_id", json_obj(json_kv_str("type", "string")))
+                    json_kv("obs_id", json_obj(json_kv_str("type", "string"))),
+                    json_kv("project_path", json_obj(json_kv_str("type", "string")))
                 )),
-                json_kv("required", json_arr(req_obsid))
+                json_kv("required", json_arr(req_obsid_proj))
             ))
         ))
 
@@ -277,7 +282,8 @@ struct QMemMCP:
             result_content = self._delete(obs_id)
         elif name == "memory_promote":
             var obs_id = json_get_string(args, "obs_id")
-            result_content = self._promote(obs_id)
+            var project_path = json_get_string(args, "project_path")
+            result_content = self._promote(obs_id, project_path)
         elif name == "mem_context":
             var project = json_get_string(args, "project")
             var limit = json_get_int(args, "limit", 10)
@@ -395,12 +401,43 @@ struct QMemMCP:
         
         return json_obj(json_kv_str("status", "deleted"), json_kv_str("obs_id", obs_id))
 
-    fn _promote(mut self, obs_id: String) raises -> String:
-        var stmt = self.db.prepare("UPDATE memory_facts SET is_global=1 WHERE obs_uuid=?")
-        self.db.bind_text(stmt, 1, obs_id)
-        _ = self.db.step(stmt)
-        self.db.finalize(stmt)
-        return json_obj(json_kv_str("status", "promoted"), json_kv_str("obs_id", obs_id))
+    fn _promote(mut self, obs_id: String, project_path: String) raises -> String:
+        if len(obs_id) == 0 or len(project_path) == 0:
+            return json_obj(json_kv_str("error", "obs_id and project_path required"))
+            
+        var stmt_read = self.db.prepare("SELECT title, content FROM memory_facts WHERE obs_uuid=?")
+        self.db.bind_text(stmt_read, 1, obs_id)
+        var title = String()
+        var content = String()
+        if self.db.step(stmt_read) == SQLITE_ROW:
+            title = self.db.col_text(stmt_read, 0)
+            content = self.db.col_text(stmt_read, 1)
+        else:
+            self.db.finalize(stmt_read)
+            return json_obj(json_kv_str("error", "not found"))
+        self.db.finalize(stmt_read)
+        
+        # Use Python interop to write file and create dirs safely
+        from python import Python
+        var os = Python.import_module("os")
+        var skill_dir = os.path.join(project_path, ".agents", "skills", "q2-consensus")
+        os.makedirs(skill_dir, True) # exist_ok=True
+        var skill_file = os.path.join(skill_dir, "SKILL.md")
+        
+        var is_new = not os.path.exists(skill_file)
+        var mode = "a"
+        var f = Python.evaluate("open")(skill_file, mode, encoding="utf-8")
+        if is_new:
+            f.write("---\nname: q2-consensus\ndescription: 项目级别全局共识与架构经验\n---\n\n# Q2 全局共识库\n\n此文件用于记录项目中跨模块的、具有深远影响的全局共识和踩坑经验。\n\n")
+        f.write("## " + title + "\n\n" + content + "\n\n")
+        f.close()
+        
+        var stmt_del = self.db.prepare("DELETE FROM memory_facts WHERE obs_uuid=?")
+        self.db.bind_text(stmt_del, 1, obs_id)
+        _ = self.db.step(stmt_del)
+        self.db.finalize(stmt_del)
+        
+        return json_obj(json_kv_str("status", "promoted_to_skill"), json_kv_str("obs_id", obs_id))
 
     fn _context(self, project: String, limit: Int) raises -> String:
         var sql = "SELECT obs_uuid, title, content FROM memory_facts WHERE deleted_at IS NULL AND project=? ORDER BY pinned DESC, created_at DESC LIMIT ?"
