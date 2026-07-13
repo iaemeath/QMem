@@ -11,21 +11,25 @@
 
 Unlike simple linear stores, it structures memory into a 2x2 layout separating **Active Context** (short-term) from **Stored Knowledge** (long-term).
 
-```mermaid
-flowchart TB
-    subgraph "Four-Quadrant Developer Memory Model"
-        direction TB
-        subgraph Active ["Active Context (Short-term)"]
-            direction LR
-            Q1["<b>Q1: Working Memory</b><br/>Current session context / active workspace state"]
-            Q2["<b>Q2: Consensus Memory</b><br/>Pinned facts, global consensus, and common project conventions"]
-        end
-        subgraph Stored ["Stored Knowledge (Long-term)"]
-            direction LR
-            Q3["<b>Q3: Structural Context</b><br/>Static AST registry, descriptors, directory identity"]
-            Q4["<b>Q4: Episodic Memory</b><br/>FTS5 keyword & vector similarity semantic search DB"]
-        end
-    end
+```text
+                       [ Scope: Global Public (Global) ]
+                                       │
+        Quadrant 1: [Global Env Redlines - Static]  │  Quadrant 2: [Project Group Public Assets - Dynamic]
+        (Intranet registry, gateway, safety rules)  │  (Cross-project reusable solution patterns/bugfixes)
+        ──────────────────────────────────────────  │  ───────────────────────────────────────────────────
+        Carrier: D:\code\CLAUDE.md                  │  Carrier: D:\code\.assets\*.md modular files
+        Mode: Push (Passive forced injection)       │  Mode: Semi-Push / Explicit Pull recall
+                                                    │
+ ───────────────────────────────────────────────────┼────────────────────────────────────────────────────► [ Mutation Frequency ]
+  (Hardly changed, resident at startup)             │                   (Dynamically appended)
+                                                    │
+        Quadrant 3: [Project Identity - Static]     │  Quadrant 4: [Project Dynamic Footprints - Dynamic]
+        (Local branch declaration, Vue version)     │  (Git branch history, handoffs, current bugs)
+        ──────────────────────────────────────────  │  ───────────────────────────────────────────────────
+        Carrier: Each project's CLAUDE.md           │  Carrier: Single-file SQLite (core_memory.db)
+        Mode: Push (Activated via path traversal)   │  Mode: Pull (Physical dual-channel hybrid search)
+                                                    │
+                       [ Scope: Project Private (Local) ]
 ```
 
 ---
@@ -112,21 +116,25 @@ Configure your MCP Client (e.g., Claude Desktop) to point to the `release/start_
 
 与传统的单维度线性存储不同，本项目将开发者的上下文在逻辑上划分为 **活跃上下文（短期）** 与 **持久知识（长期）** 的 2x2 四象限结构，以便大语言模型以低于 1 毫秒的延迟进行检索。
 
-```mermaid
-flowchart TB
-    subgraph "四象限开发者记忆模型"
-        direction TB
-        subgraph Active ["活跃上下文 (短期记忆)"]
-            direction LR
-            Q1["<b>第一象限: 工作记忆</b><br/>当前会话上下文 / 工作区活跃状态"]
-            Q2["<b>第二象限: 共识记忆</b><br/>全局开发规范 / 置顶规约知识"]
-        end
-        subgraph Stored ["持久知识 (长期记忆)"]
-            direction LR
-            Q3["<b>第三象限: 结构上下文</b><br/>项目树静态结构 / 描述文件 / 户口本信息"]
-            Q4["<b>第四象限: 历史情境记忆</b><br/>混合多模态检索库 (向量 + FTS5 全文检索)"]
-        end
-    end
+```text
+                        【 作用范围：全局公共 (Global) 】
+                                         │
+        第一象限：【全局环境红线·静态】         │   第二象限：【项目群公共资产·动态】
+        (内网私服、总网关、全局安全硬指标)     │   (跨项目可复用的高阶解决方案、避坑Pattern)
+        ───────────────────────────────  │   ────────────────────────────────────────
+        载体：D:\code\CLAUDE.md          │   载体：D:\code\.assets\*.md 模块化文件
+        模式：Push (被动强制注入)          │   模式：Semi-Push / 显式 Pull 召回
+                                         │
+ ─────────────────────────────────────────┼─────────────────────────────────────────►【 变动频率 】
+  (几乎不改，启动即常驻)                   │                  (随开发动态增量写入)
+                                         │
+        第三象限：【项目身份与硬约束·静态】     │   第四象限：【项目动态踩坑本·动态】
+        (绝对地域声明、Vue2/3死守、特定网关)   │   (Git分支足迹、临时会话交接、当下Bug)
+        ───────────────────────────────────│   ─────────────────────────────────────
+        载体：各子项目/CLAUDE.md          │   载体：单库 SQLite (core_memory.db)
+        模式：Push (路径穿透激活)          │   模式：Pull (物理级双路混合检索)
+                                         │
+                        【 作用范围：项目私有 (Local) 】
 ```
 
 ---
