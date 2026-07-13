@@ -105,7 +105,7 @@ struct QMemMCP:
             if method == "initialize":
                 res = json_obj(
                     json_kv_str("protocolVersion", "2024-11-05"),
-                    json_kv("serverInfo", json_obj(json_kv_str("name", "qmem-mcp"), json_kv_str("version", "2.0"))),
+                    json_kv("serverInfo", json_obj(json_kv_str("name", "qmem-mcp"), json_kv_str("version", "2.1"))),
                     json_kv("capabilities", json_obj(json_kv("tools", "{}")))
                 )
             elif method == "tools/list":
