@@ -20,6 +20,10 @@ onnxruntime-linux-x64-1.18.1.tgz
 ort_sdk/
 onnxruntime-linux-x64-1.18.1/
 
+# Mojo build artifacts & release packages (Mojo implementation moved to qmem-mojo repo)
+release/
+release_pkg/
+
 # Model files (too large for GitHub)
 bge-small-zh-v1.5-onnx/
 release/bge-small-zh-v1.5-onnx/
