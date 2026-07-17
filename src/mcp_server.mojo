@@ -11,7 +11,7 @@ from json_utils import (
 from sqlite_ffi import SQLiteDB, SQLITE_ROW
 from ort_ffi import OrtSession
 from tokenizer import WordPieceTokenizer
-from python import Python
+from python import Python, PythonObject
 
 comptime DbPtr = UnsafePointer[UInt8, MutAnyOrigin]
 
