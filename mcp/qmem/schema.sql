@@ -1,18 +1,23 @@
 -- ============================================================
--- QMem schema v3 —— 方案10：单表全家桶 + 虚拟外键引用
+-- QMem schema v4 —— Y 方案瘦身：纯项目记忆（单 tier，无共识域）
+-- ============================================================
+-- V4.0 改动（2026-07-20）：
+--   1. 删除 project_refs 表（瘦身后无跨项目共识引用机制）
+--   2. 删除 idx_facts_tier / idx_facts_origin 索引（单 tier 后无意义）
+--   3. 业务概念已迁 domain_knowledge.db（DomainKG MCP），技术规范在全局 CLAUDE.md
+-- V4.1 改动（2026-07-21）：
+--   4. 彻底删除 tier / origin_project 列（V4.0 保留作迁移兼容，现已确认无代码读写，删除）
 -- ============================================================
 
--- DDL 1: 记忆事实表（动态记忆 + 共识同表，tier 字段区分）
+-- DDL 1: 记忆事实表（V4.1：纯项目记忆，无 tier/origin_project 列）
 CREATE TABLE IF NOT EXISTS memory_facts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     obs_uuid TEXT UNIQUE NOT NULL,
-    project TEXT NOT NULL DEFAULT '',     -- 动态记忆填自身项目名，共识填共识域名（如 java-cloud-common）
+    project TEXT NOT NULL DEFAULT '',     -- 项目名（如 changzhou-balance-plan）
     topic_key TEXT DEFAULT '',
     title TEXT DEFAULT '',
     content TEXT NOT NULL,
     type TEXT DEFAULT 'manual',           -- decision/bugfix/reference/learning/manual/progress
-    tier TEXT NOT NULL DEFAULT 'q4',      -- q4(动态草稿) / consensus(跨项目共识)
-    origin_project TEXT DEFAULT '',       -- promote 前的原始 project（供 demote 回溯；空=已融合多源，拒绝降级）
     content_hash TEXT DEFAULT '',         -- sha256(title+content)[:16]
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -30,15 +35,6 @@ CREATE VIRTUAL TABLE IF NOT EXISTS memory_facts_fts USING fts5(
     content='memory_facts',
     content_rowid='id',
     tokenize='unicode61'
-);
-
--- DDL 4: 项目→共识域 多对多关联表（虚拟外键引用图谱）
-CREATE TABLE IF NOT EXISTS project_refs (
-    project TEXT NOT NULL,                -- 当前项目（如 bfo_zj_yxyd）
-    ref_project TEXT NOT NULL,            -- 依赖的共识域（如 java-cloud-common）
-    ref_source TEXT NOT NULL DEFAULT 'promote',  -- promote(自动建) / manual(add_consensus_ref 手动建)
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (project, ref_project)
 );
 
 -- ============================================================
@@ -75,14 +71,11 @@ BEGIN
 END;
 
 -- ============================================================
--- 索引
+-- 索引（V4.0：去掉 tier/origin 索引和 project_refs 表）
 -- ============================================================
+-- 注：memory_facts 的 FTS5/向量同步由上方触发器维护；tier/origin_project 列已删（V4.1）
 CREATE INDEX IF NOT EXISTS idx_facts_project ON memory_facts(project);
 CREATE INDEX IF NOT EXISTS idx_facts_topic ON memory_facts(topic_key);
 CREATE INDEX IF NOT EXISTS idx_facts_type ON memory_facts(type);
-CREATE INDEX IF NOT EXISTS idx_facts_tier ON memory_facts(tier);
-CREATE INDEX IF NOT EXISTS idx_facts_origin ON memory_facts(origin_project);
 CREATE INDEX IF NOT EXISTS idx_facts_deleted ON memory_facts(deleted_at);
 CREATE INDEX IF NOT EXISTS idx_facts_created ON memory_facts(created_at);
-CREATE INDEX IF NOT EXISTS idx_refs_project ON project_refs(project);
-CREATE INDEX IF NOT EXISTS idx_refs_ref ON project_refs(ref_project);

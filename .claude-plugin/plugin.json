@@ -1,7 +1,7 @@
 {
   "name": "qmem",
   "version": "0.1.0",
-  "description": "跨会话 AI 记忆系统：动态记忆 + 跨项目共识 + 代码图谱查询",
+  "description": "跨会话 AI 记忆三件套（V4.0 三 MCP 正交架构）：QMem 项目记忆（架构/进度/踩坑/决策）+ DomainKG 业务概念图谱（电力调度领域知识）+ codebase-memory 代码事实图谱（函数/调用/表字段）。",
   "author": { "name": "cly" },
   "license": "MIT",
   "homepage": "https://github.com/cly/qmem"

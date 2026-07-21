@@ -3,24 +3,27 @@
 运行方式：
     "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python313\\python.exe" test_call_log.py
 
+V4.0：QMem 在 mcp/qmem/server.py，call_log.db 在 mcp/qmem/call_log.db。
+DomainKG 不再写 call_log（已移除），所以只测 QMem 的日志机制。
+
 覆盖场景：
   1. initialize 握手后日志库自动创建 + WAL 模式
   2. 本地工具调用被正确记录（source=local, success=1, resp_size>0）
-  3. CBM 转发调用被正确记录（source=cbm）
-  4. session_tag 同一会话一致
-  5. arg_summary 被截断且可读
-  6. 日志写入失败不影响工具正常返回（模拟）
-  7. 90 天前日志被自动清理
+  3. session_tag 同一会话一致
+  4. arg_summary 被截断且可读
+  5. 日志写入失败不影响工具正常返回（模拟）
+  6. 90 天前日志被自动清理
 """
 import subprocess, json, time, sqlite3, os, sys, tempfile
 
 PYTHON = r"C:\Users\Administrator\AppData\Local\Programs\Python\Python313\python.exe"
-_DIR = os.path.dirname(os.path.abspath(__file__))
-SCRIPT = os.path.join(_DIR, "mcp_server.py")
+_DIR = os.path.dirname(os.path.abspath(__file__))            # mcp/tools/
+_QMEM_DIR = os.path.normpath(os.path.join(_DIR, "..", "qmem"))
+SCRIPT = os.path.join(_QMEM_DIR, "server.py")
 
-# ---- 测试用日志库路径：与 mcp_server.py 的 LOG_DBPATH 同源（脚本上一级目录的 call_log.db）----
+# ---- 测试用日志库路径：与 qmem/server.py 的 LOG_DBPATH 同源（qmem/call_log.db）----
 # 通过环境变量无法覆盖（路径是模块级常量），所以测真实库但测后清理
-LOG_DB = os.path.normpath(os.path.join(_DIR, "..", "call_log.db"))
+LOG_DB = os.path.normpath(os.path.join(_QMEM_DIR, "call_log.db"))
 
 passed, failed = [], []
 

@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>领域知识图谱</title>
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+/* kg.html 专属样式（少量补充，主体复用 style.css）*/
+.kg-page { display: flex; flex-direction: column; height: calc(100vh - 56px); }
+.kg-toolbar { display:flex; align-items:center; gap:12px; padding:8px 14px;
+  background:#fff; border-bottom:1px solid #e2e8f0; flex-wrap:wrap; }
+.kg-toolbar .search-box { flex: 0 0 260px; }
+.kg-stage { position:relative; flex:1; min-height:0; }
+.kg-stage canvas { display:block; width:100%; height:100%; }
+/* 6 种关系颜色图例 */
+.kg-rel-legend { display:flex; gap:10px; font-size:12px; flex-wrap:wrap; }
+.kg-rel-dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:3px; vertical-align:middle; }
+/* 详情面板里的双栏定义 */
+.kg-dt-section { margin-top:10px; }
+.kg-dt-label { font-size:12px; color:#64748b; font-weight:600; margin-bottom:3px; }
+.kg-dt-def { font-size:13px; color:#1e293b; line-height:1.55; white-space:pre-wrap; background:#f8fafc; padding:8px; border-radius:4px; }
+.kg-dt-mis { font-size:13px; color:#b45309; line-height:1.55; white-space:pre-wrap;
+  background:#fffbeb; padding:8px; border-radius:4px; border-left:3px solid #f59e0b; }
+.kg-dt-empty { color:#94a3b8; font-style:italic; font-size:12px; }
+.kg-verify-badge { display:inline-block; padding:1px 7px; border-radius:9px; font-size:11px; margin-left:6px; }
+.kg-verify-pending { background:#fef3c7; color:#b45309; }
+.kg-verify-ok { background:#dcfce7; color:#15803d; }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="brand">🧠 领域知识图谱</span>
+  <span id="navMount"></span>
+  <div class="stat-chips" id="statChips"></div>
+</header>
+
+<div class="kg-page">
+  <!-- 工具栏 -->
+  <div class="kg-toolbar">
+    <button class="btn" id="reLayoutBtn"><span class="icon">⟳</span> 重新布局</button>
+    <button class="btn" id="toggleSimBtn"><span class="icon">⏸</span> <span id="simLabel">暂停仿真</span></button>
+    <input type="text" class="search-box" id="searchBox" placeholder="搜概念名/别名/定义...">
+    <div class="kg-rel-legend" id="relLegend"></div>
+    <span class="hint" style="margin-left:auto">点击节点看双栏详情 · 双击聚焦邻域 · 滚轮缩放</span>
+  </div>
+
+  <!-- 画布 + 详情面板 -->
+  <div class="graph-stage kg-stage" id="graphStage">
+    <canvas id="graphCanvas"></canvas>
+    <div class="graph-detail" id="detailPanel">
+      <span class="dt-close" id="detailClose">×</span>
+      <div id="detailContent"></div>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/common.js"></script>
+<script>
+// ── 6 种关系颜色映射 ──
+const REL_COLORS = {
+  derives_from: '#3b82f6',  // 派生-蓝
+  constrains:   '#dc2626',  // 约束-红
+  aggregates:   '#8b5cf6',  // 聚合-紫
+  depends_on:   '#0ea5e9',  // 依赖-青
+  synonym_of:   '#10b981',  // 同义-绿
+  contradicts:  '#f59e0b',  // 矛盾-橙
+};
+const REL_LABEL = {
+  derives_from: '派生', constrains: '约束', aggregates: '聚合',
+  depends_on: '依赖', synonym_of: '同义', contradicts: '矛盾',
+};
+
+// ── 数据 ──
+let kgData = null;
+let focusName = null;  // 双击聚焦的概念名（null=显示全图）
+
+// ── 仿真状态（复用 graph.html 的力导向模型）──
+const sim = {
+  nodes: [], edges: [], nodeMap: {},
+  running: true, animId: null,
+  scale: 1, offsetX: 0, offsetY: 0,
+  hoverNode: null, dragNode: null,
+  REPULSION: 1400, SPRING: 0.03, SPRING_LEN: 120, DAMP: 0.82, CENTER: 0.004,
+};
+
+const canvas = document.getElementById('graphCanvas');
+const ctx = canvas.getContext('2d');
+
+// ── 初始化 ──
+async function init() {
+  document.getElementById('navMount').innerHTML = renderNav('kg');
+  await loadGraph();
+
+  // 渲染关系图例
+  document.getElementById('relLegend').innerHTML = Object.entries(REL_LABEL)
+    .map(([k, v]) => `<span><span class="kg-rel-dot" style="background:${REL_COLORS[k]}"></span>${v}</span>`)
+    .join('');
+
+  buildSim();
+  resize();
+  window.addEventListener('resize', resize);
+  bindInteraction();
+  bindButtons();
+  tick();
+}
+
+async function loadGraph() {
+  kgData = await fetchJSON('/api/kg-graph');
+  const stat = (n, label, cls='') => `<span class="chip ${cls}">${label} <b>${n}</b></span>`;
+  document.getElementById('statChips').innerHTML = [
+    stat(kgData.node_count, '概念'),
+    stat(kgData.edge_count, '关系'),
+    stat(kgData.pending_verify, '待核实', 'consensus'),
+  ].join('');
+}
+
+function buildSim() {
+  const W = canvas.clientWidth, H = canvas.clientHeight;
+  sim.nodes = kgData.nodes.map((n, i) => {
+    const angle = (i / Math.max(kgData.nodes.length, 1)) * Math.PI * 2;
+    const radius = Math.min(W, H) * 0.3;
+    return {
+      id: n.id, name: n.name, verified: n.verified, degree: n.degree,
+      definition_preview: n.definition_preview,
+      misconception_preview: n.misconception_preview,
+      source: n.source, obs_id: n.obs_id,
+      x: W / 2 + Math.cos(angle) * (radius + Math.random() * 30),
+      y: H / 2 + Math.sin(angle) * (radius + Math.random() * 30),
+      vx: 0, vy: 0,
+    };
+  });
+  sim.nodeMap = {};
+  sim.nodes.forEach(n => sim.nodeMap[n.id] = n);
+  sim.edges = kgData.edges.filter(e => sim.nodeMap[e.source] && sim.nodeMap[e.target]);
+}
+
+function resize() {
+  const stage = document.getElementById('graphStage');
+  const rect = stage.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+const W = () => canvas.clientWidth;
+const H = () => canvas.clientHeight;
+
+// ── 仿真步进 ──
+function tick() {
+  if (sim.running) physics();
+  draw();
+  sim.animId = requestAnimationFrame(tick);
+}
+
+function physics() {
+  const { nodes, edges } = sim;
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i], b = nodes[j];
+      let dx = a.x - b.x, dy = a.y - b.y;
+      let dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const minDist = nodeRadius(a) + nodeRadius(b) + 8;
+      let force = dist < minDist ? (minDist - dist) * 0.3 : 0;
+      force += sim.REPULSION / (dist * dist);
+      let fx = (dx / dist) * force, fy = (dy / dist) * force;
+      a.vx += fx; a.vy += fy; b.vx -= fx; b.vy -= fy;
+    }
+  }
+  edges.forEach(e => {
+    const a = sim.nodeMap[e.source], b = sim.nodeMap[e.target];
+    let dx = b.x - a.x, dy = b.y - a.y;
+    let dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    let force = (dist - sim.SPRING_LEN) * sim.SPRING;
+    let fx = (dx / dist) * force, fy = (dy / dist) * force;
+    a.vx += fx; a.vy += fy; b.vx -= fx; b.vy -= fy;
+  });
+  nodes.forEach(n => {
+    if (n === sim.dragNode) return;
+    n.vx += (W() / 2 - n.x) * sim.CENTER;
+    n.vy += (H() / 2 - n.y) * sim.CENTER;
+    n.vx *= sim.DAMP; n.vy *= sim.DAMP;
+    n.x += n.vx; n.y += n.vy;
+  });
+}
+
+function nodeRadius(n) {
+  // 基于 degree 缩放，孤立概念稍小
+  return Math.min(20, 8 + Math.sqrt(n.degree || 0) * 3);
+}
+
+// ── 绘制 ──
+function draw() {
+  ctx.clearRect(0, 0, W(), H());
+  ctx.save();
+  ctx.translate(sim.offsetX, sim.offsetY);
+  ctx.scale(sim.scale, sim.scale);
+
+  // 边（按关系类型染色）
+  sim.edges.forEach(e => {
+    const a = sim.nodeMap[e.source], b = sim.nodeMap[e.target];
+    const color = REL_COLORS[e.relation_type] || '#cbd5e1';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.2 + (e.weight || 1) * 0.8;
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    // 箭头（constrains/derives_from 等有向关系才画箭头，synonym_of 无向不画）
+    if (e.relation_type !== 'synonym_of') {
+      const mx = a.x + (b.x - a.x) * 0.55, my = a.y + (b.y - a.y) * 0.55;
+      let dx = b.x - a.x, dy = b.y - a.y, len = Math.sqrt(dx * dx + dy * dy) || 1;
+      const ax = 5 * dx / len, ay = 5 * dy / len;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(mx + ax, my + ay);
+      ctx.lineTo(mx - ay * 0.5, my + ax * 0.5);
+      ctx.lineTo(mx + ay * 0.5, my - ax * 0.5);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // 关系类型标签（边中点小字）
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    ctx.fillStyle = color;
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(REL_LABEL[e.relation_type] || e.relation_type, mx, my - 6);
+  });
+
+  // 节点
+  sim.nodes.forEach(n => {
+    const r = nodeRadius(n);
+    const isHover = n === sim.hoverNode;
+    const isFocus = focusName && n.id === focusName;
+    // 待核实=橙描边，已核实=绿
+    const stroke = n.verified ? '#10b981' : '#f59e0b';
+    if (isHover || isFocus) {
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r + 6, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(59,130,246,0.18)';
+      ctx.fill();
+    }
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = n.verified ? '#dbeafe' : '#fef3c7';
+    ctx.fill();
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = isFocus ? 3 : 2;
+    ctx.stroke();
+    // 标签
+    ctx.fillStyle = '#1e293b';
+    ctx.font = (isFocus ? 'bold ' : '') + '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    let label = n.name;
+    if (label.length > 18) label = label.slice(0, 17) + '…';
+    ctx.fillText(label, n.x, n.y + r + 3);
+  });
+
+  ctx.restore();
+}
+
+function screenToWorld(sx, sy) {
+  return { x: (sx - sim.offsetX) / sim.scale, y: (sy - sim.offsetY) / sim.scale };
+}
+
+// ── 交互 ──
+let clickTimer = null;
+function bindInteraction() {
+  canvas.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+    if (sim.dragNode) {
+      const w = screenToWorld(sx, sy);
+      sim.dragNode.x = w.x; sim.dragNode.y = w.y;
+      sim.dragNode.vx = 0; sim.dragNode.vy = 0;
+    } else if (sim.panning) {
+      sim.offsetX += sx - sim.panStartX;
+      sim.offsetY += sy - sim.panStartY;
+      sim.panStartX = sx; sim.panStartY = sy;
+    } else {
+      const w = screenToWorld(sx, sy);
+      let found = null;
+      for (const n of sim.nodes) {
+        if (Math.hypot(n.x - w.x, n.y - w.y) < nodeRadius(n) + 4) { found = n; break; }
+      }
+      sim.hoverNode = found;
+      canvas.style.cursor = found ? 'pointer' : 'crosshair';
+    }
+  });
+
+  canvas.addEventListener('mousedown', e => {
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+    const w = screenToWorld(sx, sy);
+    let found = null;
+    for (const n of sim.nodes) {
+      if (Math.hypot(n.x - w.x, n.y - w.y) < nodeRadius(n) + 4) { found = n; break; }
+    }
+    if (found) { sim.dragNode = found; }
+    else { sim.panning = true; sim.panStartX = sx; sim.panStartY = sy; canvas.style.cursor = 'move'; }
+  });
+
+  canvas.addEventListener('mouseup', () => { sim.dragNode = null; sim.panning = false; });
+  canvas.addEventListener('mouseleave', () => { sim.dragNode = null; sim.panning = false; sim.hoverNode = null; });
+
+  // 单击=看详情；双击=聚焦邻域（区分单击双击用定时器）
+  canvas.addEventListener('click', e => {
+    if (!sim.hoverNode) return;
+    if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; return; }  // 让 dblclick 处理
+    clickTimer = setTimeout(() => {
+      clickTimer = null;
+      showDetail(sim.hoverNode);
+    }, 220);
+  });
+
+  canvas.addEventListener('dblclick', e => {
+    if (!sim.hoverNode) return;
+    focusOn(sim.hoverNode.id);
+  });
+
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+    const delta = e.deltaY < 0 ? 1.12 : 0.89;
+    const newScale = Math.max(0.3, Math.min(3, sim.scale * delta));
+    sim.offsetX = sx - (sx - sim.offsetX) * (newScale / sim.scale);
+    sim.offsetY = sy - (sy - sim.offsetY) * (newScale / sim.scale);
+    sim.scale = newScale;
+  }, { passive: false });
+}
+
+// ── 详情面板（双栏：definition + misconception）──
+function showDetail(node) {
+  const panel = document.getElementById('detailPanel');
+  const content = document.getElementById('detailContent');
+  const verifiedBadge = node.verified
+    ? '<span class="kg-verify-badge kg-verify-ok">已核实</span>'
+    : '<span class="kg-verify-badge kg-verify-pending">待核实</span>';
+
+  const defHtml = node.definition_preview
+    ? `<div class="kg-dt-def">${esc(node.definition_preview)}</div>`
+    : '<div class="kg-dt-empty">（无定义，待联网补充）</div>';
+  const misHtml = node.misconception_preview
+    ? `<div class="kg-dt-mis">⚠️ ${esc(node.misconception_preview)}</div>`
+    : '<div class="kg-dt-empty">（无 AI 易误解点，待用户补充 —— 这是图谱的核心价值字段）</div>';
+  const sourceHtml = node.source
+    ? `<div class="kg-dt-label">来源</div><div style="font-size:12px;color:#64748b">${esc(node.source)}</div>` : '';
+
+  // 该节点的关联关系
+  const rels = kgData.edges
+    .filter(e => e.source === node.id || e.target === node.id)
+    .map(e => {
+      const other = e.source === node.id ? e.target : e.source;
+      const arrow = e.source === node.id ? ' → ' : ' ← ';
+      const color = REL_COLORS[e.relation_type] || '#999';
+      return `<span style="font-size:12px;margin-right:8px"><span class="kg-rel-dot" style="background:${color}"></span>${esc(REL_LABEL[e.relation_type] || e.relation_type)}${arrow}${esc(other)}</span>`;
+    }).join('');
+
+  content.innerHTML = `
+    <h4>${esc(node.name)} ${verifiedBadge}</h4>
+    ${node.aliases ? `<div style="font-size:12px;color:#64748b">别名：${esc(node.aliases)}</div>` : ''}
+    <div class="kg-dt-section">
+      <div class="kg-dt-label">📖 定义（联网搜，AI 填）</div>
+      ${defHtml}
+    </div>
+    <div class="kg-dt-section">
+      <div class="kg-dt-label">⚠️ AI 易误解点（用户补）</div>
+      ${misHtml}
+    </div>
+    ${sourceHtml ? `<div class="kg-dt-section">${sourceHtml}</div>` : ''}
+    ${rels ? `<div class="kg-dt-section"><div class="kg-dt-label">关系（${kgData.edges.filter(e => e.source === node.id || e.target === node.id).length}）</div><div>${rels}</div></div>` : ''}
+    <div class="kg-dt-section" style="font-size:11px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:6px">
+      obs_id: ${esc(node.obs_id)} · 发现错误用 concept_update(obs_id=..., ...) 修改
+    </div>
+  `;
+  panel.classList.add('show');
+}
+
+document.getElementById('detailClose').onclick = () => {
+  document.getElementById('detailPanel').classList.remove('show');
+};
+
+// ── 双击聚焦：加载该概念邻域子图 ──
+async function focusOn(name) {
+  focusName = name;
+  try {
+    const sub = await fetchJSON('/api/kg-neighbor?name=' + encodeURIComponent(name) + '&depth=2');
+    // 用邻域子图替换仿真数据
+    kgData.nodes = sub.nodes.map(n => ({
+      id: n.id, name: n.name, verified: n.verified, degree: 0,
+      definition_preview: n.definition_preview, misconception_preview: n.misconception_preview,
+      source: n.source, obs_id: n.obs_id,
+    }));
+    kgData.edges = sub.edges;
+    // 重算度数
+    const deg = {};
+    kgData.edges.forEach(e => { deg[e.source] = (deg[e.source]||0)+1; deg[e.target] = (deg[e.target]||0)+1; });
+    kgData.nodes.forEach(n => n.degree = deg[n.id] || 0);
+    buildSim();
+    sim.scale = 1; sim.offsetX = 0; sim.offsetY = 0;
+    if (!sim.running) toggleSim();
+    // 自动展开中心节点详情
+    const centerNode = sim.nodes.find(n => n.id === name);
+    if (centerNode) showDetail(centerNode);
+  } catch (err) {
+    console.error('focus failed', err);
+  }
+}
+
+// ── 按钮 ──
+function bindButtons() {
+  document.getElementById('reLayoutBtn').onclick = () => {
+    const W0 = canvas.clientWidth, H0 = canvas.clientHeight;
+    sim.nodes.forEach((n, i) => {
+      const angle = (i / Math.max(sim.nodes.length, 1)) * Math.PI * 2;
+      n.x = W0 / 2 + Math.cos(angle) * (Math.min(W0, H0) * 0.3 + Math.random() * 40);
+      n.y = H0 / 2 + Math.sin(angle) * (Math.min(W0, H0) * 0.3 + Math.random() * 40);
+      n.vx = 0; n.vy = 0;
+    });
+    sim.scale = 1; sim.offsetX = 0; sim.offsetY = 0;
+    if (!sim.running) toggleSim();
+  };
+  document.getElementById('toggleSimBtn').onclick = toggleSim;
+
+  // 搜索框：过滤高亮（输入时把非匹配节点淡化）
+  document.getElementById('searchBox').addEventListener('input', debounce(e => {
+    const q = e.target.value.trim().toLowerCase();
+    // 简单实现：搜索时聚焦匹配的第一个概念
+    if (!q) return;
+    const hit = sim.nodes.find(n =>
+      n.name.toLowerCase().includes(q) ||
+      (n.definition_preview || '').toLowerCase().includes(q)
+    );
+    if (hit) {
+      sim.offsetX = W() / 2 - hit.x * sim.scale;
+      sim.offsetY = H() / 2 - hit.y * sim.scale;
+    }
+  }, 300));
+}
+
+function toggleSim() {
+  sim.running = !sim.running;
+  document.getElementById('simLabel').textContent = sim.running ? '暂停仿真' : '继续仿真';
+  document.querySelector('#toggleSimBtn .icon').textContent = sim.running ? '⏸' : '▶';
+}
+
+// ── 启动 ──
+init();
+</script>
+</body>
+</html>

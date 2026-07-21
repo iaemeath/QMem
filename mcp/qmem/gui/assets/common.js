@@ -31,6 +31,7 @@ function renderNav(current) {
   const links = [
     { id: 'list',  href: '/',        icon: '☰', label: '记忆列表' },
     { id: 'graph', href: '/graph',   icon: '🕸', label: '引用图谱' },
+    { id: 'kg',    href: '/kg',      icon: '🧠', label: '领域知识图谱' },
   ];
   const html = links.map(l =>
     `<a href="${l.href}" class="${l.id === current ? 'active' : ''}">${l.icon} ${l.label}</a>`

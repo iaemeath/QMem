@@ -1,12 +1,24 @@
 {
   "mcpServers": {
     "QMem": {
-      "command": "${CLAUDE_PLUGIN_ROOT}/mcp/python/start_python_mcp.bat",
+      "command": "${CLAUDE_PLUGIN_ROOT}/mcp/qmem/start.bat",
       "args": [],
       "env": {
         "PYTHONUTF8": "1",
         "PYTHON": "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python313\\python.exe"
       }
+    },
+    "DomainKG": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/mcp/domain-kg/start.bat",
+      "args": [],
+      "env": {
+        "PYTHONUTF8": "1",
+        "PYTHON": "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python313\\python.exe"
+      }
+    },
+    "codebase-memory": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/mcp/codebase-memory/codebase-memory-mcp.exe",
+      "args": []
     }
   }
 }

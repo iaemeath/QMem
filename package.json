@@ -4,5 +4,5 @@
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
-  "description": "跨会话 AI 记忆系统插件（便携版）：MCP server（mem_save/mem_recall/consensus 等）+ skill 使用手册 + 本地 embedding 模型 + CBM 代码图谱引擎。"
+  "description": "跨会话 AI 记忆三件套插件（V4.0 三 MCP 正交架构，便携版）：QMem 项目记忆 MCP + DomainKG 业务概念图谱 MCP + codebase-memory 代码事实图谱 MCP，共享本地 embedding 模型与 skill 使用手册。"
 }

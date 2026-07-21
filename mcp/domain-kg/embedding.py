@@ -11,8 +11,9 @@ except ImportError:
 class BGEEmbedding:
     def __init__(self, model_dir=None):
         if model_dir is None:
-            _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            model_dir = os.path.join(_ROOT, 'bge-small-zh-v1.5-onnx')
+            # V4.0 目录独立：模型与本文件同目录（mcp/domain-kg/bge-small-zh-v1.5-onnx）
+            _DIR = os.path.dirname(os.path.abspath(__file__))
+            model_dir = os.path.join(_DIR, 'bge-small-zh-v1.5-onnx')
         self.model_dir = model_dir
         self.session = None
         self.tokenizer = None

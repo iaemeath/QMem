@@ -30,3 +30,6 @@ release_pkg/
 # Local cache
 .cache/
 tmp/
+
+# Database backups (runtime state, e.g. core_memory.db.bak_cleanup_*)
+*.bak*
