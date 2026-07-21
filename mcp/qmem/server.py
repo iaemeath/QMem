@@ -129,7 +129,7 @@ class QMemMCP:
         # 初始化调用日志库（独立文件，不影响核心库）
         self._init_log_db()
 
-        return {"protocolVersion": "2024-11-05", "serverInfo": {"name": "qmem-mcp", "version": "4.0"}, "capabilities": {"tools": {}}}
+        return {"protocolVersion": "2024-11-05", "serverInfo": {"name": "qmem-mcp", "version": "4.1"}, "capabilities": {"tools": {}}}
 
     def _tools_list(self):
         local_tools = [

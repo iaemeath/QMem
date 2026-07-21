@@ -80,7 +80,7 @@ class DomainMCP:
         conn.commit()
         conn.close()
         return {"protocolVersion": "2024-11-05",
-                "serverInfo": {"name": "domain-kg-mcp", "version": "4.0"},
+                "serverInfo": {"name": "domain-kg-mcp", "version": "4.1"},
                 "capabilities": {"tools": {}}}
 
     def _tools_list(self):
